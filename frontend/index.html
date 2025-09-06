@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Annapurna - Surplus Food Rescue</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f8fafc; /* slate-50 */
+        scroll-behavior: smooth;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9; /* slate-100 */
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; /* slate-300 */
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; /* slate-400 */
+      }
+      #map,
+      #donor-map {
+        border-radius: 0.5rem;
+      }
+      #map {
+        height: 400px;
+      }
+      #donor-map {
+        height: 250px;
+        cursor: pointer;
+      }
+      .leaflet-top,
+      .leaflet-bottom {
+        z-index: 999 !important;
+      }
+      .main-hero {
+        background-image: linear-gradient(
+            to top,
+            rgba(0, 0, 0, 0.8),
+            rgba(0, 0, 0, 0.5)
+          ),
+          url("hero.jpeg?auto=compress&cs=tinysrgb&w=1260&h=900&dpr=1");
+        background-size: cover;
+        background-position: center;
+      }
+      .highlight-card {
+        border-color: #f97316 !important; /* orange-500 */
+        box-shadow: 0 0 15px rgba(249, 115, 22, 0.4);
+        transform: scale(1.02);
+      }
+      .toast-error {
+        background-color: #dc2626; /* red-600 */
+      }
+      .login-tab-active {
+        border-bottom-width: 3px !important;
+        font-weight: 700 !important;
+      }
+      .login-tab-donor.login-tab-active {
+        border-color: #f97316; /* orange-500 */
+        color: #f97316;
+      }
+      .login-tab-volunteer.login-tab-active {
+        border-color: #2563eb; /* blue-600 */
+        color: #2563eb;
+      }
+      .leaflet-tooltip-permanent {
+        background: white;
+        color: #1e293b; /* slate-800 */
+        border: 1px solid #e2e8f0; /* slate-200 */
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body class="antialiased">
+    <!-- Header Section -->
+    <header class="bg-white shadow-md sticky top-0 z-[1000]">
+      <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center">
+            <a
+              href="#"
+              id="home-link"
+              class="text-2xl font-extrabold text-orange-600 flex items-center tracking-tight"
+            >
+              <i class="fas fa-bowl-rice" mr-2"></i>&nbsp; Annapurna
+            </a>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <!-- Logged In Links (Desktop only) -->
+            <div
+              id="nav-logged-in-links"
+              class="hidden md:flex items-center space-x-4"
+            >
+              <span
+                id="nav-welcome-msg"
+                class="text-gray-800 font-medium"
+              ></span>
+              <div id="nav-donor-links" class="hidden items-baseline space-x-2">
+                <button
+                  id="nav-dashboard-btn"
+                  class="text-gray-700 hover:bg-orange-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  My Dashboard
+                </button>
+                <button
+                  id="nav-add-donation-btn"
+                  class="bg-orange-100 text-orange-700 hover:bg-orange-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  <i class="fas fa-plus mr-1"></i> Add Donation
+                </button>
+              </div>
+              <div
+                id="nav-volunteer-links"
+                class="hidden items-baseline space-x-2"
+              >
+                <button
+                  id="nav-volunteer-dashboard-btn"
+                  class="text-gray-700 hover:bg-blue-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  My Dashboard
+                </button>
+                <button
+                  id="nav-find-donations-btn"
+                  class="bg-blue-100 text-blue-700 hover:bg-blue-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Find Donations
+                </button>
+              </div>
+            </div>
+
+            <!-- Auth Buttons (All screens) -->
+            <div id="nav-auth-buttons">
+              <button
+                id="nav-login-btn"
+                class="hidden bg-orange-500 text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-orange-600 transition-transform duration-200 hover:scale-105 shadow"
+              >
+                Login
+              </button>
+              <button
+                id="nav-logout-btn"
+                class="hidden bg-red-500 text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-red-600 shadow"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Landing Page View -->
+      <section id="landing-view">
+        <!-- Hero Section -->
+        <div
+          class="main-hero text-white rounded-lg shadow-xl p-8 md:p-16 my-4 text-center flex flex-col items-center"
+        >
+          <h1 class="text-4xl md:text-6xl font-extrabold mb-4 leading-tight">
+            Turn Surplus Into Sustenance
+          </h1>
+          <p class="text-lg md:text-xl text-slate-200 max-w-3xl mx-auto">
+            Connecting those with excess food to those in need. A simple act of
+            kindness, powered by technology.
+          </p>
+          <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              id="main-donate-btn"
+              class="bg-orange-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-orange-700 transition duration-300 shadow-lg text-lg transform hover:scale-105"
+            >
+              <i class="fas fa-bowl-rice mr-2"></i>I Have Surplus Food
+            </button>
+            <button
+              id="main-volunteer-btn"
+              class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 shadow-lg text-lg transform hover:scale-105"
+            >
+              <i class="fas fa-hands-helping mr-2"></i>I Want to volunteer
+            </button>
+          </div>
+        </div>
+
+        <!-- How It Works Section -->
+        <div
+          class="py-16 bg-white rounded-lg shadow-lg border border-slate-200 mt-8"
+        >
+          <div class="text-center mb-12 px-4">
+            <h2 class="text-4xl font-bold text-gray-800">
+              Simple Steps to Make a Big Difference
+            </h2>
+            <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+              Our process is designed to be fast, easy, and efficient, ensuring
+              good food reaches hungry plates, not landfills.
+            </p>
+          </div>
+          <div class="grid md:grid-cols-3 gap-8 text-center px-8">
+            <div class="flex flex-col items-center">
+              <div
+                class="bg-orange-100 text-orange-600 rounded-full h-24 w-24 flex items-center justify-center"
+              >
+                <i class="fas fa-bullhorn text-4xl"></i>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800 mt-6 mb-2">
+                1. List Food
+              </h3>
+              <p class="text-gray-600">
+                Donors take a minute to post details about their surplus food
+                through our simple form.
+              </p>
+            </div>
+            <div class="flex flex-col items-center">
+              <div
+                class="bg-blue-100 text-blue-600 rounded-full h-24 w-24 flex items-center justify-center"
+              >
+                <i class="fas fa-bell text-4xl"></i>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800 mt-6 mb-2">
+                2. Get Notified
+              </h3>
+              <p class="text-gray-600">
+                Nearby volunteers receive an instant alert on their devices
+                about the new listing.
+              </p>
+            </div>
+            <div class="flex flex-col items-center">
+              <div
+                class="bg-green-100 text-green-600 rounded-full h-24 w-24 flex items-center justify-center"
+              >
+                <i class="fas fa-truck text-4xl"></i>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800 mt-6 mb-2">
+                3. Collect & Deliver
+              </h3>
+              <p class="text-gray-600">
+                A volunteer accepts the pickup, collects the food, and delivers
+                it to the designated point.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Impact Section -->
+        <div
+          class="mt-8 bg-gray-800 text-white rounded-lg shadow-xl p-8 md:p-12"
+        >
+          <div class="text-center mb-10">
+            <h2 class="text-4xl font-bold">Our Impact, By the Numbers</h2>
+            <p class="mt-3 text-slate-300 max-w-2xl mx-auto">
+              Every donation contributes to a larger story of change and
+              community support.
+            </p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="text-center bg-gray-700 p-6 rounded-lg">
+              <p class="text-5xl font-bold text-orange-400">1,250+</p>
+              <p class="text-slate-300 mt-2 text-lg">Meals Served</p>
+            </div>
+            <div class="text-center bg-gray-700 p-6 rounded-lg">
+              <p class="text-5xl font-bold text-orange-400">350+ kg</p>
+              <p class="text-slate-300 mt-2 text-lg">Food Rescued</p>
+            </div>
+            <div class="text-center bg-gray-700 p-6 rounded-lg">
+              <p class="text-5xl font-bold text-orange-400">50+</p>
+              <p class="text-slate-300 mt-2 text-lg">Active Partners</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Our Mission Section -->
+        <div
+          class="mt-8 grid md:grid-cols-2 gap-8 items-center bg-white p-8 rounded-lg shadow-lg border border-slate-200"
+        >
+          <div class="pr-8">
+            <h3 class="text-3xl font-bold text-gray-800 mb-4">
+              The Crisis We Address
+            </h3>
+            <p class="text-gray-700 mb-4 text-lg">
+              In India, nearly 40% of all food produced goes to waste, a
+              staggering loss when millions still face hunger daily. This isn't
+              just a logistical failure; it's a social and environmental crisis.
+              Wasted food contributes to greenhouse gas emissions in landfills
+              while valuable nutrition is lost forever.
+            </p>
+            <h3 class="text-3xl font-bold text-gray-800 mb-4 mt-6">
+              Our Mission
+            </h3>
+            <p class="text-gray-700 mb-4 text-lg">
+              Annapurna was born to bridge this gap. We aim to create a
+              real-time, zero-waste channel connecting food donors with a
+              network of dedicated volunteers and NGOs. By leveraging simple
+              technology, we ensure that good food reaches hungry plates instead
+              of landfills.
+            </p>
+          </div>
+          <div>
+            <img
+              src="https://images.pexels.com/photos/6994982/pexels-photo-6994982.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
+              alt="Food donation"
+              class="rounded-lg shadow-md w-full h-auto object-cover"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- Donor Dashboard View -->
+      <section id="donor-dashboard-view" class="hidden p-4 sm:p-6 lg:p-8">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="text-3xl font-bold text-gray-800 mb-2">
+            Your Impact Dashboard
+          </h2>
+          <p class="text-gray-600 mb-6">
+            Thank you for making a difference,
+            <span id="dashboard-donor-name" class="font-semibold"></span>!
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div
+              class="bg-white p-6 rounded-lg shadow border flex items-center gap-5"
+            >
+              <i class="fas fa-utensils text-4xl text-orange-500"></i>
+              <div>
+                <p
+                  class="text-3xl font-bold text-gray-800"
+                  id="stats-meals-served"
+                >
+                  0
+                </p>
+                <p class="text-gray-500">Total Meals Served</p>
+              </div>
+            </div>
+            <div
+              class="bg-white p-6 rounded-lg shadow border flex items-center gap-5"
+            >
+              <i class="fas fa-gift text-4xl text-green-500"></i>
+              <div>
+                <p
+                  class="text-3xl font-bold text-gray-800"
+                  id="stats-donations-made"
+                >
+                  0
+                </p>
+                <p class="text-gray-500">Donations Made</p>
+              </div>
+            </div>
+          </div>
+          <div id="my-donations-container">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">
+              Your Donation History
+            </h3>
+            <div id="my-donations-list" class="space-y-6"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Donor Form View -->
+      <section id="donor-form-view" class="hidden p-4 sm:p-6 lg:p-8">
+        <div
+          class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-slate-200"
+        >
+          <h2
+            id="donor-form-title"
+            class="text-3xl font-bold text-gray-800 mb-6"
+          >
+            List Your Surplus Food
+          </h2>
+          <form id="donation-form" class="space-y-6">
+            <input type="hidden" id="donation-id" name="donation-id" />
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Food Item(s)</label
+              >
+              <div id="food-items-container" class="space-y-3"></div>
+              <button
+                type="button"
+                id="add-food-item-btn"
+                class="mt-2 text-sm text-orange-600 font-semibold hover:text-orange-800"
+              >
+                <i class="fas fa-plus-circle mr-1"></i>Add Another Item
+              </button>
+            </div>
+            <div>
+              <label
+                for="serves"
+                class="block text-sm font-medium text-gray-700"
+                >Total Quantity (serves approx.)</label
+              >
+              <input
+                type="number"
+                id="serves"
+                name="serves"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                placeholder="e.g., 15"
+                required
+              />
+            </div>
+            <div>
+              <label
+                for="pickup-datetime"
+                class="block text-sm font-medium text-gray-700"
+                >Pickup-by Date & Time</label
+              >
+              <input
+                type="datetime-local"
+                id="pickup-datetime"
+                name="pickupBy"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700"
+                >Pickup Location</label
+              >
+              <p id="donor-map-status" class="text-xs text-gray-500 mb-2">
+                <i class="fas fa-spinner fa-spin mr-1"></i>Detecting your
+                location... Click map to adjust.
+              </p>
+              <div
+                id="donor-map"
+                class="w-full shadow-inner border border-slate-200"
+              ></div>
+              <input type="hidden" id="latitude" name="latitude" required />
+              <input type="hidden" id="longitude" name="longitude" required />
+            </div>
+            <button
+              type="submit"
+              id="submit-donation-btn"
+              class="w-full bg-orange-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-orange-700 transition duration-300 flex items-center justify-center text-lg shadow-md"
+            >
+              <i class="fas fa-paper-plane mr-2"></i>Submit Donation
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Volunteer Dashboard View -->
+      <section id="volunteer-dashboard-view" class="hidden p-4 sm:p-6 lg:p-8">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="text-3xl font-bold text-gray-800 mb-2">
+            Volunteer Dashboard
+          </h2>
+          <p class="text-gray-600 mb-6">
+            Welcome back,
+            <span id="dashboard-volunteer-name" class="font-semibold"></span>!
+            Here's your impact:
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div
+              class="bg-white p-6 rounded-lg shadow border flex items-center gap-5"
+            >
+              <i class="fas fa-hands-helping text-4xl text-blue-500"></i>
+              <div>
+                <p
+                  class="text-3xl font-bold text-gray-800"
+                  id="stats-donations-collected"
+                >
+                  0
+                </p>
+                <p class="text-gray-500">Donations Collected</p>
+              </div>
+            </div>
+            <div
+              class="bg-white p-6 rounded-lg shadow border flex items-center gap-5"
+            >
+              <i class="fas fa-users text-4xl text-green-500"></i>
+              <div>
+                <p
+                  class="text-3xl font-bold text-gray-800"
+                  id="stats-people-served"
+                >
+                  0
+                </p>
+                <p class="text-gray-500">People Served</p>
+              </div>
+            </div>
+            <div
+              class="bg-white p-6 rounded-lg shadow border flex items-center gap-5"
+            >
+              <i class="fas fa-weight-hanging text-4xl text-yellow-500"></i>
+              <div>
+                <p
+                  class="text-3xl font-bold text-gray-800"
+                  id="stats-food-rescued"
+                >
+                  0 kg
+                </p>
+                <p class="text-gray-500">Food Rescued (est.)</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">
+              Your Pickup History
+            </h3>
+            <div id="my-pickups-list" class="space-y-6"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Volunteer Find Donations View -->
+      <section id="volunteer-find-view" class="hidden p-4 sm:p-6 lg:p-8">
+        <div
+          class="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-200"
+        >
+          <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4"
+          >
+            <div>
+              <h2 class="text-3xl font-bold text-gray-800">Nearby Donations</h2>
+              <div id="location-status" class="text-sm text-gray-500 mt-1">
+                <i class="fas fa-spinner fa-spin mr-2"></i>Getting your
+                location...
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <label
+                for="serves-filter"
+                class="text-sm font-medium text-gray-700"
+                >Serves at least:</label
+              >
+              <select
+                id="serves-filter"
+                class="rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+              >
+                <option value="0">Any</option>
+                <option value="10">10 people</option>
+                <option value="25">25 people</option>
+                <option value="50">50 people</option>
+                <option value="100">100 people</option>
+              </select>
+            </div>
+          </div>
+          <div
+            id="map"
+            class="w-full mb-6 shadow-inner border border-slate-200"
+          ></div>
+          <div id="donation-list" class="space-y-4"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modern Login Modal -->
+    <div
+      id="login-modal"
+      class="hidden fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-[2000] p-4"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl w-full max-w-sm transform transition-all relative"
+      >
+        <button
+          id="login-modal-close-btn"
+          class="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+        >
+          <i class="fas fa-times text-2xl"></i>
+        </button>
+        <div class="flex border-b">
+          <button
+            id="login-donor-tab"
+            class="login-tab-donor login-tab-active flex-1 py-3 text-lg font-semibold text-gray-500 focus:outline-none transition-colors duration-300"
+          >
+            <i class="fas fa-gift mr-2"></i>Donor
+          </button>
+          <button
+            id="login-volunteer-tab"
+            class="login-tab-volunteer flex-1 py-3 text-lg font-semibold text-gray-500 focus:outline-none transition-colors duration-300"
+          >
+            <i class="fas fa-hands-helping mr-2"></i>Volunteer
+          </button>
+        </div>
+        <div class="p-8">
+          <h3
+            id="login-title"
+            class="text-2xl font-bold text-gray-800 text-center"
+          >
+            Login as a Donor
+          </h3>
+          <form id="login-form" class="mt-8 space-y-6">
+            <div>
+              <label
+                for="login-phone"
+                class="block text-sm font-medium text-gray-700"
+                >Phone Number</label
+              >
+              <input
+                id="login-phone"
+                name="phoneNumber"
+                type="tel"
+                required
+                class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
+                placeholder="e.g., 9876543210"
+              />
+            </div>
+            <div>
+              <label
+                for="login-password"
+                class="block text-sm font-medium text-gray-700"
+                >Password</label
+              >
+              <input
+                id="login-password"
+                name="password"
+                type="password"
+                required
+                class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
+                placeholder="••••••••"
+              />
+            </div>
+            <div>
+              <button
+                type="submit"
+                id="login-submit-btn"
+                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all"
+              >
+                Login
+              </button>
+            </div>
+          </form>
+          <p class="text-center mt-6 text-sm text-gray-600">
+            Don't have an account?
+            <a
+              href="#"
+              id="login-to-register-link"
+              class="font-medium text-orange-600 hover:text-orange-500"
+              >Sign Up</a
+            >
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Register Choice Modal -->
+    <div
+      id="register-modal"
+      class="hidden fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-[2000] p-4"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform transition-all relative"
+      >
+        <button
+          id="register-modal-close-btn"
+          class="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+        >
+          <i class="fas fa-times text-2xl"></i>
+        </button>
+        <h3 class="text-xl font-bold text-gray-800 text-center">
+          Join Annapurna
+        </h3>
+        <p class="mt-2 text-gray-600 text-center">
+          How would you like to contribute?
+        </p>
+        <div class="mt-6 flex flex-col space-y-3">
+          <button
+            id="register-donor-btn"
+            class="w-full bg-orange-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-orange-700 flex items-center justify-center text-lg shadow-md transition-transform transform hover:scale-105"
+          >
+            <i class="fas fa-gift mr-2"></i>Register as a Donor
+          </button>
+          <button
+            id="register-volunteer-btn"
+            class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center text-lg shadow-md transition-transform transform hover:scale-105"
+          >
+            <i class="fas fa-hands-helping mr-2"></i>Register as a Volunteer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Registration Form Modal -->
+    <div
+      id="user-register-modal"
+      class="hidden fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-[2000] p-4"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl p-8 w-full max-w-sm transform transition-all relative"
+      >
+        <button
+          id="user-register-modal-close-btn"
+          class="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+        >
+          <i class="fas fa-times text-2xl"></i>
+        </button>
+        <h3
+          id="register-form-title"
+          class="text-2xl font-bold text-gray-800 text-center"
+        >
+          Register
+        </h3>
+        <form id="register-form" class="mt-8 space-y-6">
+          <input type="hidden" id="register-role" name="role" />
+          <div>
+            <label
+              for="register-full-name"
+              class="block text-sm font-medium text-gray-700"
+              >Full Name</label
+            >
+            <input
+              id="register-full-name"
+              name="fullName"
+              type="text"
+              required
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="e.g., Suresh Kumar"
+            />
+          </div>
+          <div>
+            <label
+              for="register-phone"
+              class="block text-sm font-medium text-gray-700"
+              >Phone Number</label
+            >
+            <input
+              id="register-phone"
+              name="phoneNumber"
+              type="tel"
+              required
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="e.g., 9876543210"
+            />
+          </div>
+          <div>
+            <label
+              for="register-password"
+              class="block text-sm font-medium text-gray-700"
+              >Password</label
+            >
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              required
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="Min. 6 characters"
+            />
+          </div>
+          <div>
+            <button
+              type="submit"
+              id="register-submit-btn"
+              class="w-full flex justify-center py-3 px-4 border-transparent rounded-md shadow-sm text-lg font-medium text-white transition-colors"
+            >
+              Register
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div
+      id="confirmation-modal"
+      class="hidden fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-[2000] p-4"
+    >
+      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+        <h3 id="modal-title" class="text-xl font-bold text-gray-800">
+          Confirm Action
+        </h3>
+        <p id="modal-body" class="mt-2 text-gray-600">Are you sure?</p>
+        <div class="mt-6 flex justify-end space-x-3">
+          <button
+            id="modal-cancel-btn"
+            class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            id="modal-confirm-btn"
+            class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 font-semibold"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div
+      id="toast-notification"
+      class="hidden fixed bottom-5 right-5 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg z-[3000] flex items-center gap-3"
+    >
+      <i id="toast-icon" class="fas fa-check-circle"></i>
+      <p id="toast-message">Action successful!</p>
+    </div>
+
+    <footer class="bg-white py-6 border-t mt-8">
+      <div class="container mx-auto text-center text-gray-500">
+        &copy; 2025 Annapurna Project.
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // --- CONFIGURATION ---
+        const API_BASE_URL = "/api";
+
+        // --- GLOBAL STATE & UI ELEMENTS ---
+        let state = {
+          currentUser: null,
+          token: null,
+          userLocation: null,
+          currentDonations: [],
+          mapMarkers: [],
+        };
+
+        let volunteerMap = null,
+          donorMap = null,
+          pickupMarker = null;
+
+        const views = {
+          landing: document.getElementById("landing-view"),
+          donorDashboard: document.getElementById("donor-dashboard-view"),
+          donorForm: document.getElementById("donor-form-view"),
+          volunteerDashboard: document.getElementById(
+            "volunteer-dashboard-view"
+          ),
+          volunteerFind: document.getElementById("volunteer-find-view"),
+        };
+
+        const modals = {
+          login: document.getElementById("login-modal"),
+          registerChoice: document.getElementById("register-modal"),
+          registerForm: document.getElementById("user-register-modal"),
+          confirmation: document.getElementById("confirmation-modal"),
+        };
+
+        const loginUI = {
+          donorTab: document.getElementById("login-donor-tab"),
+          volunteerTab: document.getElementById("login-volunteer-tab"),
+          title: document.getElementById("login-title"),
+          submitBtn: document.getElementById("login-submit-btn"),
+          phoneInput: document.getElementById("login-phone"),
+          passwordInput: document.getElementById("login-password"),
+          toRegisterLink: document.getElementById("login-to-register-link"),
+        };
+
+        let confirmCallback = null;
+
+        // --- API HELPER ---
+        const apiFetch = async (endpoint, options = {}) => {
+          const url = `${API_BASE_URL}${endpoint}`;
+          const headers = {
+            "Content-Type": "application/json",
+            ...options.headers,
+          };
+          if (state.token) headers["Authorization"] = `Bearer ${state.token}`;
+          try {
+            const response = await fetch(url, { ...options, headers });
+            if (!response.ok) {
+              const errorData = await response
+                .json()
+                .catch(() => ({ message: "An unknown error occurred." }));
+              throw new Error(errorData.message);
+            }
+            // Handle cases with no JSON response body (like 204 No Content)
+            if (response.status === 204) {
+              return null;
+            }
+            return await response.json();
+          } catch (error) {
+            console.error(`API Error on ${endpoint}:`, error);
+            showToast(error.message, true);
+            throw error;
+          }
+        };
+
+        // --- UI & NOTIFICATION HELPERS ---
+        const showView = (viewName) => {
+          Object.values(views).forEach((v) => v.classList.add("hidden"));
+          if (views[viewName]) views[viewName].classList.remove("hidden");
+          window.scrollTo(0, 0);
+        };
+
+        const showToast = (message, isError = false) => {
+          const toast = document.getElementById("toast-notification");
+          const toastIcon = document.getElementById("toast-icon");
+          document.getElementById("toast-message").textContent = message;
+          toast.classList.toggle("bg-green-600", !isError);
+          toast.classList.toggle("toast-error", isError);
+          toastIcon.className = isError
+            ? "fas fa-times-circle"
+            : "fas fa-check-circle";
+          toast.classList.remove("hidden");
+          setTimeout(() => toast.classList.add("hidden"), 4000);
+        };
+
+        const showModal = (modalName) =>
+          modals[modalName].classList.remove("hidden");
+        const hideAllModals = () =>
+          Object.values(modals).forEach((m) => m.classList.add("hidden"));
+
+        const showConfirmation = (title, body, onConfirm) => {
+          document.getElementById("modal-title").textContent = title;
+          document.getElementById("modal-body").textContent = body;
+          confirmCallback = onConfirm;
+          showModal("confirmation");
+        };
+
+        // --- AUTHENTICATION & SESSION MANAGEMENT ---
+        const updateUIForAuthState = () => {
+          const loginBtn = document.getElementById("nav-login-btn");
+          const logoutBtn = document.getElementById("nav-logout-btn");
+          const loggedInLinks = document.getElementById("nav-logged-in-links");
+          const donorLinks = document.getElementById("nav-donor-links");
+          const volunteerLinks = document.getElementById("nav-volunteer-links");
+          const welcomeMsg = document.getElementById("nav-welcome-msg");
+
+          if (state.currentUser && state.token) {
+            loginBtn.classList.add("hidden");
+            logoutBtn.classList.remove("hidden");
+            loggedInLinks.classList.remove("hidden");
+            welcomeMsg.textContent = `Welcome, ${
+              state.currentUser.fullName.split(" ")[0]
+            }!`;
+            if (state.currentUser.role === "donor") {
+              donorLinks.classList.remove("hidden");
+              volunteerLinks.classList.add("hidden");
+            } else if (state.currentUser.role === "volunteer") {
+              donorLinks.classList.add("hidden");
+              volunteerLinks.classList.remove("hidden");
+            }
+          } else {
+            loginBtn.classList.remove("hidden");
+            logoutBtn.classList.add("hidden");
+            loggedInLinks.classList.add("hidden");
+            donorLinks.classList.add("hidden");
+            volunteerLinks.classList.add("hidden");
+            welcomeMsg.textContent = "";
+            showView("landing");
+          }
+        };
+
+        const handleLogin = async (userData, selectedRole) => {
+          if (userData.user.role !== selectedRole) {
+            showToast(
+              "Login failed. Please use the correct portal for your account.",
+              true
+            );
+            return;
+          }
+          state.currentUser = userData.user;
+          state.token = userData.token;
+          localStorage.setItem("annapurnaToken", userData.token);
+          localStorage.setItem("annapurnaUser", JSON.stringify(userData.user));
+          hideAllModals();
+          showToast("Login successful!");
+          updateUIForAuthState();
+          if (userData.user.role === "donor") await showDonorDashboard();
+          else await showVolunteerDashboard();
+        };
+
+        const handleLogout = () => {
+          state.currentUser = null;
+          state.token = null;
+          localStorage.removeItem("annapurnaToken");
+          localStorage.removeItem("annapurnaUser");
+          updateUIForAuthState();
+          showToast("You have been logged out.");
+          showView("landing");
+        };
+
+        const checkInitialSession = () => {
+          const token = localStorage.getItem("annapurnaToken");
+          const user = JSON.parse(localStorage.getItem("annapurnaUser"));
+          if (token && user) {
+            state.token = token;
+            state.currentUser = user;
+            updateUIForAuthState();
+            if (user.role === "donor") showDonorDashboard();
+            else showVolunteerDashboard();
+          } else {
+            updateUIForAuthState();
+            showView("landing");
+          }
+        };
+
+        // --- DONOR FUNCTIONALITY ---
+        const showDonorDashboard = async () => {
+          showView("donorDashboard");
+          document.getElementById("dashboard-donor-name").textContent =
+            state.currentUser.fullName;
+          try {
+            const donations = await apiFetch("/donations/mydonations");
+            const totalMealsServed = donations.reduce(
+              (sum, d) => sum + (d.serves || 0),
+              0
+            );
+            document.getElementById("stats-meals-served").textContent =
+              totalMealsServed;
+            document.getElementById("stats-donations-made").textContent =
+              donations.length;
+            renderMyDonations(donations);
+          } catch (error) {
+            console.error("Failed to load donor dashboard data");
+          }
+        };
+
+        const showDonorForm = (donation = null) => {
+          showView("donorForm");
+          initializeDonorMap(donation);
+          const form = document.getElementById("donation-form");
+          form.reset();
+          document.getElementById("food-items-container").innerHTML = "";
+
+          if (donation) {
+            document.getElementById("donor-form-title").textContent =
+              "Edit Your Donation";
+            document.getElementById(
+              "submit-donation-btn"
+            ).innerHTML = `<i class="fas fa-save mr-2"></i>Update Donation`;
+            document.getElementById("donation-id").value = donation._id;
+            donation.foodItems.forEach((item) =>
+              addFoodItemRow(item.name, item.quantity)
+            );
+            document.getElementById("serves").value = donation.serves;
+            document.getElementById("pickup-datetime").value = new Date(
+              new Date(donation.pickupBy).getTime() -
+                new Date().getTimezoneOffset() * 60000
+            )
+              .toISOString()
+              .slice(0, 16);
+            setPickupLocation(
+              donation.location.coordinates[1],
+              donation.location.coordinates[0]
+            );
+          } else {
+            document.getElementById("donor-form-title").textContent =
+              "List Your Surplus Food";
+            document.getElementById(
+              "submit-donation-btn"
+            ).innerHTML = `<i class="fas fa-paper-plane mr-2"></i>Submit Donation`;
+            document.getElementById("donation-id").value = "";
+            addFoodItemRow();
+          }
+        };
+
+        const addFoodItemRow = (name = "", quantity = "") => {
+          const container = document.getElementById("food-items-container");
+          const itemIndex = container.children.length;
+          const row = document.createElement("div");
+          row.className = "flex items-center gap-2";
+          row.innerHTML = `<input type="text" name="foodItemName" class="flex-grow px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="e.g., Paneer Butter Masala" value="${name}" required><input type="text" name="foodItemQuantity" class="w-1/3 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="e.g., 5 kg" value="${quantity}" required>${
+            itemIndex > 0
+              ? '<button type="button" class="remove-food-item-btn text-red-500 hover:text-red-700 text-2xl font-bold">&times;</button>'
+              : '<div class="w-6"></div>'
+          }`;
+          container.appendChild(row);
+        };
+
+        const renderMyDonations = (donations) => {
+          const container = document.getElementById("my-donations-list");
+          container.innerHTML = "";
+          if (!donations || donations.length === 0) {
+            container.innerHTML = `<div class="text-center p-10 bg-white rounded-lg shadow-md border"><i class="fas fa-inbox text-4xl text-slate-400 mb-4"></i><h3 class="text-xl font-semibold text-gray-700">No Donations Yet</h3><p class="text-gray-500 mt-2">Click 'Add Donation' to list your first surplus item!</p></div>`;
+            return;
+          }
+          donations.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          );
+          donations.forEach((d) => {
+            const statusStyles = {
+              Available: {
+                bg: "bg-green-100",
+                text: "text-green-800",
+                icon: "fa-check-circle",
+              },
+              "Pickup Accepted": {
+                bg: "bg-yellow-100",
+                text: "text-yellow-800",
+                icon: "fa-person-running",
+              },
+              Completed: {
+                bg: "bg-blue-100",
+                text: "text-blue-800",
+                icon: "fa-handshake",
+              },
+              Expired: {
+                bg: "bg-red-100",
+                text: "text-red-800",
+                icon: "fa-times-circle",
+              },
+            };
+            const card = document.createElement("div");
+            card.className =
+              "bg-white p-5 rounded-xl shadow-md border border-slate-200";
+            const pickupDate = new Date(d.pickupBy);
+            const timeString = pickupDate.toLocaleTimeString("en-IN", {
+              hour: "numeric",
+              minute: "2-digit",
+            });
+            const dateString = pickupDate.toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+            let volunteerInfo = "";
+            if (d.status === "Pickup Accepted" && d.volunteerId) {
+              volunteerInfo = `<div class="mt-3 pt-3 border-t"><p class="text-sm text-gray-700">Pickup assigned to: <span class="font-bold">${d.volunteerId.fullName}</span>. Please have the items ready.</p></div>`;
+            }
+            let editButton = "";
+            if (d.status === "Available") {
+              editButton = `<button class="edit-donation-btn text-sm text-blue-600 hover:text-blue-800 font-semibold" data-id="${d._id}"><i class="fas fa-edit mr-1"></i> Edit</button>`;
+            }
+            card.innerHTML = `<div class="flex justify-between items-start mb-3"><h3 class="text-xl font-bold text-gray-800">${d.foodItems
+              .map((item) => item.name)
+              .join(
+                ", "
+              )}</h3><span class="text-xs font-bold px-3 py-1 rounded-full ${
+              statusStyles[d.status]?.bg
+            } ${
+              statusStyles[d.status]?.text
+            } flex items-center gap-2"><i class="fas ${
+              statusStyles[d.status]?.icon
+            }"></i> ${
+              d.status
+            }</span></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-600 border-t pt-4"><div><p class="text-xs">Serves Approx.</p><p class="font-bold text-gray-800">${
+              d.serves
+            } people</p></div><div><p class="text-xs">Pickup By</p><p class="font-bold text-gray-800">${dateString}, ${timeString}</p></div></div><div class="flex justify-end mt-2">${editButton}</div>${volunteerInfo}`;
+            container.appendChild(card);
+          });
+        };
+
+        const initializeDonorMap = () => {
+          if (donorMap) {
+            setTimeout(() => donorMap.invalidateSize(), 0);
+            return;
+          }
+          donorMap = L.map("donor-map").setView([12.9716, 77.5946], 12);
+          L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          ).addTo(donorMap);
+          donorMap.on("locationfound", (e) =>
+            setPickupLocation(e.latlng.lat, e.latlng.lng, 16)
+          );
+          donorMap.on("locationerror", () => {
+            document.getElementById(
+              "donor-map-status"
+            ).innerHTML = `<i class="fas fa-times-circle text-red-500 mr-1"></i>Could not find location. Using default. Click map to set.`;
+            setPickupLocation(12.9716, 77.5946, 12);
+          });
+          setTimeout(() => {
+            donorMap.locate({ setView: true, maxZoom: 16 });
+          }, 500);
+          donorMap.on("click", (e) =>
+            setPickupLocation(e.latlng.lat, e.latlng.lng)
+          );
+        };
+
+        function setPickupLocation(lat, lng, zoom = null) {
+          document.getElementById("latitude").value = lat.toFixed(6);
+          document.getElementById("longitude").value = lng.toFixed(6);
+          document.getElementById(
+            "donor-map-status"
+          ).innerHTML = `<i class="fas fa-check-circle text-green-500 mr-1"></i>Location set! Drag marker or click map to adjust.`;
+          if (pickupMarker) pickupMarker.setLatLng([lat, lng]);
+          else {
+            pickupMarker = L.marker([lat, lng], { draggable: true }).addTo(
+              donorMap
+            );
+            pickupMarker.on("dragend", (e) => {
+              const pos = e.target.getLatLng();
+              document.getElementById("latitude").value = pos.lat.toFixed(6);
+              document.getElementById("longitude").value = pos.lng.toFixed(6);
+            });
+          }
+          if (zoom) donorMap.setView([lat, lng], zoom);
+        }
+
+        // --- VOLUNTEER FUNCTIONALITY ---
+        const showVolunteerDashboard = async () => {
+          showView("volunteerDashboard");
+          document.getElementById("dashboard-volunteer-name").textContent =
+            state.currentUser.fullName;
+          try {
+            const pickups = await apiFetch("/donations/mypickups");
+            const completedPickups = pickups.filter(
+              (p) => p.status === "Completed"
+            );
+            const ongoingPickups = pickups.filter(
+              (p) => p.status === "Pickup Accepted"
+            );
+
+            const totalPeopleServed = completedPickups.reduce(
+              (sum, p) => sum + (p.serves || 0),
+              0
+            );
+            const totalFoodRescued = totalPeopleServed * 0.5; // Estimate 0.5kg per meal
+
+            document.getElementById("stats-donations-collected").textContent =
+              completedPickups.length;
+            document.getElementById("stats-people-served").textContent =
+              totalPeopleServed;
+            document.getElementById(
+              "stats-food-rescued"
+            ).textContent = `${totalFoodRescued.toFixed(1)} kg`;
+            renderMyPickups([...ongoingPickups, ...completedPickups]);
+          } catch (error) {
+            console.error("Failed to load volunteer dashboard data");
+          }
+        };
+
+        const renderMyPickups = (pickups) => {
+          const container = document.getElementById("my-pickups-list");
+          container.innerHTML = "";
+          if (!pickups || pickups.length === 0) {
+            container.innerHTML = `<div class="text-center p-10 bg-white rounded-lg shadow-md border"><i class="fas fa-box-open text-4xl text-slate-400 mb-4"></i><h3 class="text-xl font-semibold text-gray-700">No Pickups Yet</h3><p class="text-gray-500 mt-2">Go to 'Find Donations' to accept your first pickup!</p></div>`;
+            return;
+          }
+          pickups.forEach((p) => {
+            const card = document.createElement("div");
+            card.className =
+              "bg-white p-5 rounded-xl shadow-md border border-slate-200";
+            const isOngoing = p.status === "Pickup Accepted";
+            let actionButtons = "";
+            if (isOngoing) {
+              actionButtons = `<div class="mt-4 flex gap-2"><button class="cancel-pickup-btn flex-1 text-center bg-red-100 text-red-700 px-4 py-2 rounded-md text-sm font-semibold hover:bg-red-200" data-id="${p._id}">Cancel Pickup</button><button class="complete-pickup-btn flex-1 text-center bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-green-700" data-id="${p._id}">Mark as Completed</button></div>`;
+            }
+
+            card.innerHTML = `<h3 class="text-lg font-bold text-gray-800">${p.foodItems
+              .map((item) => item.name)
+              .join(", ")}</h3><p class="text-sm text-gray-600">From: ${
+              p.donorId.fullName
+            }</p><p class="text-sm text-gray-500">Status: <span class="font-semibold ${
+              isOngoing ? "text-yellow-600" : "text-green-600"
+            }">${p.status}</span></p>${actionButtons}`;
+            container.appendChild(card);
+          });
+        };
+
+        const showFindDonations = async () => {
+          showView("volunteerFind");
+          initializeVolunteerMap();
+          await getVolunteerLocationAndFetchDonations();
+        };
+
+        const getVolunteerLocationAndFetchDonations = async () => {
+          const locationStatus = document.getElementById("location-status");
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              state.userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              };
+              locationStatus.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-2"></i>Location Found!`;
+              if (volunteerMap) volunteerMap.setView(state.userLocation, 13);
+              await fetchAndRenderDonations();
+            },
+            async () => {
+              locationStatus.innerHTML = `<i class="fas fa-times-circle text-red-500 mr-2"></i>Location access denied. Using default.`;
+              state.userLocation = { lat: 12.9716, lng: 77.5946 };
+              if (volunteerMap) volunteerMap.setView(state.userLocation, 12);
+              await fetchAndRenderDonations();
+            }
+          );
+        };
+
+        const fetchAndRenderDonations = async () => {
+          const minServes = document.getElementById("serves-filter").value;
+          if (!state.userLocation) return;
+          const { lat, lng } = state.userLocation;
+          try {
+            const donations = await apiFetch(
+              `/donations/nearby?lat=${lat}&lng=${lng}&minServes=${minServes}`
+            );
+            state.currentDonations = donations;
+            renderDonationsListAndMapMarkers();
+          } catch (error) {
+            document.getElementById(
+              "donation-list"
+            ).innerHTML = `<p class="text-center text-red-500">Could not load donations.</p>`;
+          }
+        };
+
+        const initializeVolunteerMap = () => {
+          if (volunteerMap) {
+            setTimeout(() => volunteerMap.invalidateSize(), 0);
+            return;
+          }
+          volunteerMap = L.map("map").setView([12.9716, 77.5946], 12);
+          L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          ).addTo(volunteerMap);
+        };
+
+        const renderDonationsListAndMapMarkers = () => {
+          const container = document.getElementById("donation-list");
+          container.innerHTML = "";
+          state.mapMarkers.forEach((marker) => marker.remove());
+          state.mapMarkers = [];
+
+          if (!state.currentDonations || state.currentDonations.length === 0) {
+            container.innerHTML =
+              '<p class="text-center text-gray-500 p-8">No available donations match your criteria.</p>';
+            return;
+          }
+
+          state.currentDonations.sort((a, b) => {
+            if (a.status === b.status)
+              return a.dist.calculated - b.dist.calculated;
+            return a.status === "Available" ? -1 : 1;
+          });
+
+          state.currentDonations.forEach((d) => {
+            const card = document.createElement("div");
+            card.id = `donation-card-${d._id}`;
+            card.className = `p-4 border rounded-lg bg-white hover:shadow-lg flex flex-col sm:flex-row items-start gap-4 transition-all duration-300 donation-card cursor-pointer`;
+            card.dataset.lat = d.location.coordinates[1];
+            card.dataset.lng = d.location.coordinates[0];
+            const pickupDate = new Date(d.pickupBy);
+
+            let actionHtml;
+            if (d.status === "Available") {
+              actionHtml = `<button class="accept-pickup-btn w-full text-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-700" data-id="${
+                d._id
+              }">Accept Pickup</button><a href="https://wa.me/${
+                d.donorInfo.phoneNumber
+              }?text=Hi%20${
+                d.donorInfo.fullName
+              },%20I'm%20a%20volunteer%20from%20Annapurna.%20I'd%20like%20to%20pick%20up%20your%20donation%20of%20${d.foodItems
+                .map((i) => i.name)
+                .join(
+                  ", "
+                )}." target="_blank" class="contact-donor-btn w-full text-center bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-green-700"><i class="fab fa-whatsapp"></i> Contact</a>`;
+            } else if (d.volunteerId === state.currentUser.id) {
+              actionHtml = `<p class="w-full text-center text-sm font-semibold text-green-700 bg-green-100 py-2 px-4 rounded-md">You accepted this</p>`;
+            } else {
+              actionHtml = `<p class="w-full text-center text-sm font-semibold text-gray-600 bg-gray-100 py-2 px-4 rounded-md">Accepted by another</p>`;
+            }
+
+            card.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="text-lg font-bold text-gray-900">${d.foodItems
+                          .map((i) => i.name)
+                          .join(", ")}</h3>
+                        <p class="text-sm text-gray-600 mt-1">From: <span class="font-medium">${
+                          d.donorInfo.fullName
+                        }</span></p>
+                        <p class="text-sm text-gray-600">Distance: <span class="font-medium">${d.dist.calculated.toFixed(
+                          1
+                        )} km away</span></p>
+                        <p class="text-sm text-gray-500">Pickup by: <span class="font-medium text-red-600">${pickupDate.toLocaleDateString()} ${pickupDate.toLocaleTimeString(
+              [],
+              { hour: "2-digit", minute: "2-digit" }
+            )}</span></p>
+                    </div>
+                    <div class="flex-shrink-0 flex flex-col gap-2 w-full sm:w-40 mt-4 sm:mt-0">${actionHtml}</div>`;
+            container.appendChild(card);
+
+            const marker = L.marker([
+              d.location.coordinates[1],
+              d.location.coordinates[0],
+            ])
+              .addTo(volunteerMap)
+              .bindTooltip(`Serves: ${d.serves}`, {
+                permanent: true,
+                direction: "top",
+                offset: [0, -10],
+              });
+
+            marker.donationId = d._id;
+            state.mapMarkers.push(marker);
+
+            marker.on("click", () => {
+              const cardToScroll = document.getElementById(
+                `donation-card-${marker.donationId}`
+              );
+              if (cardToScroll) {
+                cardToScroll.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+                // Add a temporary highlight effect
+                cardToScroll.classList.add("highlight-card");
+                setTimeout(
+                  () => cardToScroll.classList.remove("highlight-card"),
+                  2000
+                );
+              }
+            });
+          });
+        };
+
+        const setupLoginModal = (role) => {
+          if (role === "donor") loginUI.donorTab.click();
+          else loginUI.volunteerTab.click();
+          showModal("login");
+        };
+
+        // --- EVENT LISTENERS ---
+        document.getElementById("home-link").addEventListener("click", (e) => {
+          e.preventDefault();
+          showView("landing");
+        });
+        document
+          .getElementById("nav-logout-btn")
+          .addEventListener("click", handleLogout);
+
+        document
+          .getElementById("main-donate-btn")
+          .addEventListener("click", () => {
+            if (state.currentUser) showDonorDashboard();
+            else setupLoginModal("donor");
+          });
+        document
+          .getElementById("main-volunteer-btn")
+          .addEventListener("click", () => {
+            if (state.currentUser) showVolunteerDashboard();
+            else setupLoginModal("volunteer");
+          });
+
+        document
+          .getElementById("nav-add-donation-btn")
+          .addEventListener("click", () => showDonorForm());
+        document
+          .getElementById("nav-dashboard-btn")
+          .addEventListener("click", () => showDonorDashboard());
+        document
+          .getElementById("nav-volunteer-dashboard-btn")
+          .addEventListener("click", () => showVolunteerDashboard());
+        document
+          .getElementById("nav-find-donations-btn")
+          .addEventListener("click", () => showFindDonations());
+        document
+          .getElementById("nav-login-btn")
+          .addEventListener("click", () => showModal("login"));
+
+        [
+          "login-modal-close-btn",
+          "register-modal-close-btn",
+          "user-register-modal-close-btn",
+          "modal-cancel-btn",
+        ].forEach((id) => {
+          document.getElementById(id).addEventListener("click", hideAllModals);
+        });
+
+        document
+          .getElementById("modal-confirm-btn")
+          .addEventListener("click", () => {
+            if (confirmCallback) confirmCallback();
+            hideAllModals();
+            confirmCallback = null;
+          });
+
+        loginUI.donorTab.addEventListener("click", () => {
+          loginUI.donorTab.classList.add("login-tab-active");
+          loginUI.volunteerTab.classList.remove("login-tab-active");
+          loginUI.title.textContent = "Login as a Donor";
+          loginUI.submitBtn.className = loginUI.submitBtn.className.replace(
+            /bg-blue-600|hover:bg-blue-700/g,
+            "bg-orange-600 hover:bg-orange-700"
+          );
+          [loginUI.phoneInput, loginUI.passwordInput].forEach(
+            (el) =>
+              (el.className = el.className.replace(
+                /focus:ring-blue-500|focus:border-blue-500/g,
+                "focus:ring-orange-500 focus:border-orange-500"
+              ))
+          );
+          loginUI.toRegisterLink.className =
+            loginUI.toRegisterLink.className.replace(
+              /text-blue-600|hover:text-blue-500/g,
+              "text-orange-600 hover:text-orange-500"
+            );
+        });
+        loginUI.volunteerTab.addEventListener("click", () => {
+          loginUI.volunteerTab.classList.add("login-tab-active");
+          loginUI.donorTab.classList.remove("login-tab-active");
+          loginUI.title.textContent = "Login as a Volunteer";
+          loginUI.submitBtn.className = loginUI.submitBtn.className.replace(
+            /bg-orange-600|hover:bg-orange-700/g,
+            "bg-blue-600 hover:bg-blue-700"
+          );
+          [loginUI.phoneInput, loginUI.passwordInput].forEach(
+            (el) =>
+              (el.className = el.className.replace(
+                /focus:ring-orange-500|focus:border-orange-500/g,
+                "focus:ring-blue-500 focus:border-blue-500"
+              ))
+          );
+          loginUI.toRegisterLink.className =
+            loginUI.toRegisterLink.className.replace(
+              /text-orange-600|hover:text-orange-500/g,
+              "text-blue-600 hover:text-blue-500"
+            );
+        });
+        loginUI.toRegisterLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          hideAllModals();
+          if (loginUI.donorTab.classList.contains("login-tab-active"))
+            document.getElementById("register-donor-btn").click();
+          else document.getElementById("register-volunteer-btn").click();
+        });
+
+        document
+          .getElementById("register-donor-btn")
+          .addEventListener("click", () => {
+            hideAllModals();
+            document.getElementById("register-form-title").textContent =
+              "Register as a Donor";
+            document.getElementById("register-role").value = "donor";
+            document.getElementById("register-submit-btn").className =
+              "w-full flex justify-center py-3 px-4 border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-orange-600 hover:bg-orange-700 transition-colors";
+            showModal("registerForm");
+          });
+
+        document
+          .getElementById("register-volunteer-btn")
+          .addEventListener("click", () => {
+            hideAllModals();
+            document.getElementById("register-form-title").textContent =
+              "Register as a Volunteer";
+            document.getElementById("register-role").value = "volunteer";
+            document.getElementById("register-submit-btn").className =
+              "w-full flex justify-center py-3 px-4 border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors";
+            showModal("registerForm");
+          });
+
+        document
+          .getElementById("login-form")
+          .addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(e.target).entries());
+            const selectedRole = loginUI.donorTab.classList.contains(
+              "login-tab-active"
+            )
+              ? "donor"
+              : "volunteer";
+            data.role = selectedRole;
+            try {
+              const userData = await apiFetch("/auth/login", {
+                method: "POST",
+                body: JSON.stringify(data),
+              });
+              await handleLogin(userData, selectedRole);
+            } catch (err) {}
+          });
+
+        document
+          .getElementById("register-form")
+          .addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(e.target).entries());
+            try {
+              const userData = await apiFetch("/auth/register", {
+                method: "POST",
+                body: JSON.stringify(data),
+              });
+              await handleLogin(userData, data.role);
+            } catch (err) {}
+          });
+
+        document
+          .getElementById("donation-form")
+          .addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const donationId = formData.get("donation-id");
+            const foodItems = Array.from(
+              document.querySelectorAll("#food-items-container > div")
+            ).map((row) => ({
+              name: row.querySelector('[name="foodItemName"]').value,
+              quantity: row.querySelector('[name="foodItemQuantity"]').value,
+            }));
+            const donationData = {
+              foodItems,
+              serves: parseInt(formData.get("serves")),
+              pickupBy: formData.get("pickupBy"),
+              location: {
+                type: "Point",
+                coordinates: [
+                  parseFloat(formData.get("longitude")),
+                  parseFloat(formData.get("latitude")),
+                ],
+              },
+            };
+
+            try {
+              if (donationId) {
+                await apiFetch(`/donations/${donationId}`, {
+                  method: "PUT",
+                  body: JSON.stringify(donationData),
+                });
+                showToast("Donation updated successfully!");
+              } else {
+                await apiFetch("/donations", {
+                  method: "POST",
+                  body: JSON.stringify(donationData),
+                });
+                showToast("Donation listed successfully!");
+              }
+              await showDonorDashboard();
+            } catch (error) {
+              console.error("Failed to submit donation");
+            }
+          });
+
+        document
+          .getElementById("my-donations-list")
+          .addEventListener("click", async (e) => {
+            const editBtn = e.target.closest(".edit-donation-btn");
+            if (editBtn) {
+              const donationId = editBtn.dataset.id;
+              try {
+                const donation = await apiFetch(`/donations/${donationId}`);
+                showDonorForm(donation);
+              } catch (error) {
+                console.error("Could not fetch donation for editing.");
+              }
+            }
+          });
+
+        document
+          .getElementById("add-food-item-btn")
+          .addEventListener("click", () => addFoodItemRow());
+        document
+          .getElementById("food-items-container")
+          .addEventListener("click", (e) => {
+            if (e.target.classList.contains("remove-food-item-btn"))
+              e.target.parentElement.remove();
+          });
+
+        document
+          .getElementById("serves-filter")
+          .addEventListener("change", fetchAndRenderDonations);
+
+        // This is the event listener for the entire list of donation cards
+        document
+          .getElementById("donation-list")
+          .addEventListener("click", (e) => {
+            const card = e.target.closest(".donation-card");
+            const acceptBtn = e.target.closest(".accept-pickup-btn");
+
+            if (acceptBtn) {
+              // This makes sure the button action happens without triggering the card's map-zoom action
+              e.stopPropagation();
+              const donationId = acceptBtn.dataset.id;
+              showConfirmation(
+                "Accept Pickup?",
+                "Are you sure you want to commit to collecting this donation?",
+                async () => {
+                  try {
+                    await apiFetch(`/donations/accept/${donationId}`, {
+                      method: "PATCH",
+                    });
+                    showToast(
+                      "Pickup accepted! You can see it on your dashboard."
+                    );
+                    await showVolunteerDashboard();
+                  } catch (error) {
+                    console.error("Failed to accept pickup");
+                  }
+                }
+              );
+              return; // Stop further execution
+            }
+
+            // If a card was clicked (but not a specific button on it)
+            if (card) {
+              const lat = parseFloat(card.dataset.lat);
+              const lng = parseFloat(card.dataset.lng);
+              volunteerMap.flyTo([lat, lng], 16);
+            }
+          });
+
+        document
+          .getElementById("my-pickups-list")
+          .addEventListener("click", (e) => {
+            const cancelBtn = e.target.closest(".cancel-pickup-btn");
+            const completeBtn = e.target.closest(".complete-pickup-btn");
+            if (cancelBtn) {
+              const donationId = cancelBtn.dataset.id;
+              showConfirmation(
+                "Cancel Pickup?",
+                "Are you sure? This will make the donation available for other volunteers.",
+                async () => {
+                  try {
+                    await apiFetch(`/donations/reject/${donationId}`, {
+                      method: "PATCH",
+                    });
+                    showToast("Pickup cancelled.");
+                    await showVolunteerDashboard();
+                  } catch (error) {
+                    console.error("Failed to cancel pickup");
+                  }
+                }
+              );
+            }
+            if (completeBtn) {
+              const donationId = completeBtn.dataset.id;
+              showConfirmation(
+                "Complete Pickup?",
+                "Please confirm that you have successfully collected and delivered the food.",
+                async () => {
+                  try {
+                    await apiFetch(`/donations/complete/${donationId}`, {
+                      method: "PATCH",
+                    });
+                    showToast("Great work! Pickup marked as complete.");
+                    await showVolunteerDashboard();
+                  } catch (error) {
+                    console.error("Failed to complete pickup");
+                  }
+                }
+              );
+            }
+          });
+
+        checkInitialSession();
+      });
+    </script>
+  </body>
+</html>
